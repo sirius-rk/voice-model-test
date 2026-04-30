@@ -1,0 +1,30 @@
+[project]
+name = "stt-tts-benchmark"
+version = "0.1.0"
+description = "Streamlit app for benchmarking local STT and local/cloud TTS models."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pandas>=2.2",
+  "python-dotenv>=1.0",
+  "streamlit>=1.35",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["stt_tts_benchmark*"]
+
+[project.optional-dependencies]
+whisper = ["faster-whisper>=1.0"]
+gemini = ["google-genai>=1.0"]
+kokoro = ["pykokoro>=0.6.5", "soundfile>=0.12"]
+piper = ["piper-tts>=1.4"]
+qwen = ["qwen-tts>=0.1.1"]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -1,0 +1,17 @@
+.env
+.streamlit/secrets.toml
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+data/
+exports/
+outputs/
+models/
+*.wav
+*.mp3
+*.flac
+*.ogg
