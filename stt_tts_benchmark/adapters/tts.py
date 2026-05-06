@@ -169,12 +169,13 @@ class Qwen3TTSAdapter:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         model_name_or_path = str(self.model_path) if self.model_path.exists() else self.model_id
         use_cuda = torch.cuda.is_available()
+        attention = "flash_attention_2" if use_cuda and _has_flash_attention() else "sdpa"
         started_at = time.perf_counter()
         model = Qwen3TTSModel.from_pretrained(
             model_name_or_path,
             device_map="cuda:0" if use_cuda else "cpu",
             dtype=torch.bfloat16 if use_cuda else torch.float32,
-            attn_implementation="flash_attention_2" if use_cuda else "eager",
+            attn_implementation=attention,
         )
         wavs, sample_rate = model.generate_custom_voice(
             text=text,
@@ -247,6 +248,14 @@ def _resolve_executable(executable: str) -> str:
     if script_path.exists():
         return str(script_path)
     return executable
+
+
+def _has_flash_attention() -> bool:
+    try:
+        import flash_attn  # noqa: F401
+    except ImportError:
+        return False
+    return True
 
 
 def _kokoro_language(lang_code: str) -> str:
