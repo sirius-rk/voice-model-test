@@ -4,7 +4,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from stt_tts_benchmark.adapters import WhisperAdapter
+from stt_tts_benchmark.adapters import Qwen3ASRAdapter
 from stt_tts_benchmark.audio import convert_to_mono_wav, file_sha256, persist_uploaded_audio
 from stt_tts_benchmark.config import AppConfig
 from stt_tts_benchmark.database import init_db, insert_results
@@ -13,19 +13,44 @@ from stt_tts_benchmark.metrics import character_error_rate, normalize_text, word
 from stt_tts_benchmark.models import BenchmarkResult
 
 
-st.set_page_config(page_title="Whisper STT", layout="wide")
+st.set_page_config(page_title="Qwen3-ASR STT", layout="wide")
 
 config = AppConfig.from_env()
 init_db(config.database_path)
 
-st.title("Whisper STT Benchmark")
+st.title("Qwen3-ASR STT Benchmark")
+st.caption("Local Qwen3-ASR model inference through the Transformers backend.")
 
 with st.sidebar:
-    st.subheader("Runtime")
-    model_size = st.text_input("Whisper model size", value=config.whisper_model_size)
-    device = st.selectbox("Device", ["auto", "cpu", "cuda"], index=["auto", "cpu", "cuda"].index(config.device if config.device in {"auto", "cpu", "cuda"} else "auto"))
-    compute_type = st.text_input("Compute type", value=config.whisper_compute_type)
-    language = st.text_input("Language", value=config.language)
+    st.subheader("Local model runtime")
+    model_id = st.text_input("Model id or local path", value=config.qwen3_asr_model_id)
+    device_options = ["auto", "cpu", "cuda"]
+    configured_device = config.qwen3_asr_device.lower()
+    device = st.selectbox(
+        "Device",
+        device_options,
+        index=device_options.index(configured_device) if configured_device in device_options else 0,
+    )
+    dtype_options = ["auto", "bfloat16", "float16", "float32"]
+    configured_dtype = config.qwen3_asr_dtype.lower()
+    dtype = st.selectbox(
+        "Precision",
+        dtype_options,
+        index=dtype_options.index(configured_dtype) if configured_dtype in dtype_options else 0,
+        help="CPU inference uses float32 for compatibility.",
+    )
+    language = st.text_input(
+        "Language (Auto or model language name)",
+        value=config.qwen3_asr_language,
+        help="Use Auto for language detection, or values such as Chinese and English.",
+    )
+    max_new_tokens = st.number_input(
+        "Max new tokens",
+        min_value=64,
+        max_value=4096,
+        value=config.qwen3_asr_max_new_tokens,
+        step=64,
+    )
     st.caption(f"SQLite: {config.database_path}")
 
 uploaded_audio = st.file_uploader("Dialogue audio", type=["wav", "mp3", "m4a", "flac", "ogg"])
@@ -46,13 +71,19 @@ channel_label = st.selectbox(
 )
 reference_text = st.text_area("Reference transcript", height=160)
 
-if st.button("Run Whisper STT", type="primary", disabled=uploaded_audio is None):
+if st.button("Run Qwen3-ASR", type="primary", disabled=uploaded_audio is None):
     assert uploaded_audio is not None
     audio_path, audio_name = persist_uploaded_audio(uploaded_audio, config.output_dir / "inputs")
 
-    adapter = WhisperAdapter(model_size=model_size, device=device, compute_type=compute_type, language=language)
+    adapter = Qwen3ASRAdapter(
+        model_id=model_id,
+        device=device,
+        dtype=dtype,
+        language=language,
+        max_new_tokens=int(max_new_tokens),
+    )
     try:
-        with st.spinner("Preparing audio and transcribing..."):
+        with st.spinner("Preparing audio, loading the local model, and transcribing..."):
             if convert_to_mono:
                 audio_path = convert_to_mono_wav(
                     audio_path,
@@ -72,9 +103,9 @@ if st.button("Run Whisper STT", type="primary", disabled=uploaded_audio is None)
         )
         result = BenchmarkResult(
             page_type="stt",
-            model_name=f"Whisper {model_size}",
+            model_name=f"Qwen3-ASR {model_id}",
             provider=adapter.provider,
-            is_local=True,
+            is_local=adapter.is_local,
             input_audio_path=str(audio_path),
             input_audio_name=audio_name,
             input_audio_hash=file_sha256(audio_path),
@@ -88,7 +119,9 @@ if st.button("Run Whisper STT", type="primary", disabled=uploaded_audio is None)
             cer=cer,
         )
         insert_results(config.database_path, [result])
-        st.success("STT result saved.")
+        st.success("Qwen3-ASR result saved.")
+        if output.language:
+            st.caption(f"Detected language: {output.language}")
         st.text_area("Transcript", value=output.transcript, height=180)
         metric_cols = st.columns(4)
         metric_cols[0].metric("Latency", f"{output.latency_seconds:.2f}s")
@@ -98,9 +131,9 @@ if st.button("Run Whisper STT", type="primary", disabled=uploaded_audio is None)
     except Exception as exc:
         result = BenchmarkResult(
             page_type="stt",
-            model_name=f"Whisper {model_size}",
+            model_name=f"Qwen3-ASR {model_id}",
             provider=adapter.provider,
-            is_local=True,
+            is_local=adapter.is_local,
             input_audio_path=str(audio_path),
             input_audio_name=audio_name,
             input_audio_hash=file_sha256(audio_path),
@@ -117,4 +150,5 @@ render_history(
     title="Recent STT results",
     project_root=Path.cwd(),
     audio_column="input_audio_path",
+    key_prefix="qwen3_asr_stt",
 )

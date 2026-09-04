@@ -6,7 +6,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
-.venv/
+.venv
 data/
 exports/
 outputs/
@@ -15,3 +15,6 @@ models/
 *.mp3
 *.flac
 *.ogg
+streamlit.log
+streamlit.pid
+transfer_update/

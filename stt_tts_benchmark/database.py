@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS benchmark_results (
     brs_is_local INTEGER NOT NULL,
     brs_input_text TEXT NOT NULL DEFAULT '',
     brs_input_audio_path TEXT NOT NULL DEFAULT '',
+    brs_input_audio_name TEXT NOT NULL DEFAULT '',
     brs_input_audio_hash TEXT NOT NULL DEFAULT '',
     brs_output_audio_path TEXT NOT NULL DEFAULT '',
     brs_transcript TEXT NOT NULL DEFAULT '',
@@ -46,6 +47,7 @@ INSERT INTO benchmark_results (
     brs_is_local,
     brs_input_text,
     brs_input_audio_path,
+    brs_input_audio_name,
     brs_input_audio_hash,
     brs_output_audio_path,
     brs_transcript,
@@ -63,7 +65,7 @@ INSERT INTO benchmark_results (
     brs_notes,
     brs_status,
     brs_error_message
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 """
 
 CSV_COLUMNS = [
@@ -75,6 +77,7 @@ CSV_COLUMNS = [
     "is_local",
     "input_text",
     "input_audio_path",
+    "input_audio_name",
     "input_audio_hash",
     "output_audio_path",
     "transcript",
@@ -103,6 +106,12 @@ def connect(database_path: Path) -> sqlite3.Connection:
 def init_db(database_path: Path) -> None:
     with connect(database_path) as conn:
         conn.execute(CREATE_RESULTS_SQL)
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(benchmark_results)")}
+        if "brs_input_audio_name" not in columns:
+            conn.execute(
+                "ALTER TABLE benchmark_results "
+                "ADD COLUMN brs_input_audio_name TEXT NOT NULL DEFAULT ''"
+            )
         conn.commit()
 
 
@@ -116,6 +125,7 @@ def _result_values(result: BenchmarkResult) -> tuple[object, ...]:
         1 if row["is_local"] else 0,
         row["input_text"],
         row["input_audio_path"],
+        row["input_audio_name"],
         row["input_audio_hash"],
         row["output_audio_path"],
         row["transcript"],
@@ -162,6 +172,7 @@ def fetch_results(database_path: Path, page_type: str | None = None, limit: int 
             brs_is_local,
             brs_input_text,
             brs_input_audio_path,
+            brs_input_audio_name,
             brs_input_audio_hash,
             brs_output_audio_path,
             brs_transcript,

@@ -14,15 +14,28 @@ def _path_env(name: str, default: str) -> Path:
     return Path(os.getenv(name, default)).expanduser()
 
 
+def _int_env(name: str, default: int) -> int:
+    try:
+        return int(os.getenv(name, str(default)))
+    except ValueError:
+        return default
+
+
 @dataclass(frozen=True)
 class AppConfig:
     output_dir: Path
     database_path: Path
     export_dir: Path
+    ffmpeg_executable: str
     device: str
     language: str
     whisper_model_size: str
     whisper_compute_type: str
+    qwen3_asr_model_id: str
+    qwen3_asr_device: str
+    qwen3_asr_dtype: str
+    qwen3_asr_language: str
+    qwen3_asr_max_new_tokens: int
     kokoro_voice: str
     kokoro_lang_code: str
     piper_executable: str
@@ -45,10 +58,16 @@ class AppConfig:
             output_dir=_path_env("APP_OUTPUT_DIR", "outputs"),
             database_path=_path_env("APP_DATABASE_PATH", "data/results.db"),
             export_dir=_path_env("APP_EXPORT_DIR", "exports"),
+            ffmpeg_executable=os.getenv("FFMPEG_EXECUTABLE", "ffmpeg"),
             device=os.getenv("APP_DEVICE", "auto"),
             language=os.getenv("APP_LANGUAGE", "zh"),
             whisper_model_size=os.getenv("WHISPER_MODEL_SIZE", "small"),
             whisper_compute_type=os.getenv("WHISPER_COMPUTE_TYPE", "default"),
+            qwen3_asr_model_id=os.getenv("QWEN3_ASR_MODEL_ID", "Qwen/Qwen3-ASR-0.6B"),
+            qwen3_asr_device=os.getenv("QWEN3_ASR_DEVICE", "auto"),
+            qwen3_asr_dtype=os.getenv("QWEN3_ASR_DTYPE", "auto"),
+            qwen3_asr_language=os.getenv("QWEN3_ASR_LANGUAGE", "auto"),
+            qwen3_asr_max_new_tokens=max(1, _int_env("QWEN3_ASR_MAX_NEW_TOKENS", 4096)),
             kokoro_voice=os.getenv("KOKORO_VOICE", "zf_xiaoxiao"),
             kokoro_lang_code=os.getenv("KOKORO_LANG_CODE", "z"),
             piper_executable=os.getenv("PIPER_EXECUTABLE", "piper"),

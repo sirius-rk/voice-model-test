@@ -19,6 +19,7 @@ include = ["stt_tts_benchmark*"]
 
 [project.optional-dependencies]
 whisper = ["faster-whisper>=1.0"]
+qwen-asr = ["qwen-asr>=0.0.6"]
 gemini = ["google-genai>=1.0"]
 kokoro = ["pykokoro>=0.6.5", "soundfile>=0.12"]
 piper = ["piper-tts>=1.4"]

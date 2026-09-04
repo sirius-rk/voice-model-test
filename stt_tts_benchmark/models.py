@@ -12,6 +12,7 @@ class BenchmarkResult:
     is_local: bool
     input_text: str = ""
     input_audio_path: str = ""
+    input_audio_name: str = ""
     input_audio_hash: str = ""
     output_audio_path: str = ""
     transcript: str = ""
@@ -37,4 +38,3 @@ class BenchmarkResult:
 
     def to_row(self) -> dict[str, object]:
         return asdict(self)
-
